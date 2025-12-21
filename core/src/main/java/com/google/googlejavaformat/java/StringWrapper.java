@@ -295,14 +295,9 @@ public final class StringWrapper {
             // Advance through all consecutive \n and \r sequences
             escaped = false;
             int endIdx = idx + 1;
-            while (endIdx < text.length() - 1) {
-              if (text.charAt(endIdx) == '\\') {
-                char nextCh = text.charAt(endIdx + 1);
-                if (nextCh == 'n' || nextCh == 'r') {
-                  endIdx += 2;
-                } else {
-                  break;
-                }
+            while (endIdx + 1 < text.length()) {
+              if (text.charAt(endIdx) == '\\' && (text.charAt(endIdx + 1) == 'n' || text.charAt(endIdx + 1) == 'r')) {
+                endIdx += 2;
               } else {
                 break;
               }
