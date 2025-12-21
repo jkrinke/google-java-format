@@ -302,18 +302,58 @@ public final class StringWrapper {
     return result.build();
   }
 
+  /**
+   * Counts the number of consecutive backslashes preceding the given position.
+   *
+   * @param input the input string
+   * @param idx the position to check
+   * @return the number of consecutive backslashes immediately before idx
+   */
+  private static int countPrecedingBackslashes(String input, int idx) {
+    int count = 0;
+    int pos = idx - 1;
+    while (pos >= 0 && input.charAt(pos) == '\\') {
+      count++;
+      pos--;
+    }
+    return count;
+  }
+
   static int hasEscapedWhitespaceAt(String input, int idx) {
     if (input.startsWith("\\t", idx)) {
-      return 2;
+      // Check if the backslash itself is escaped by counting preceding backslashes.
+      // If there's an even number of preceding backslashes (including zero), then they pair up
+      // to form escaped backslashes, leaving the current backslash free to escape the 't'.
+      // If there's an odd number, the last preceding backslash escapes the current one,
+      // so this is not an escaped tab but rather an escaped backslash followed by 't'.
+      int precedingBackslashes = countPrecedingBackslashes(input, idx);
+      if (precedingBackslashes % 2 == 0) {
+        return 2;
+      }
     }
     return -1;
   }
 
   static int hasEscapedNewlineAt(String input, int idx) {
+    // Count preceding backslashes once and reuse for both checks
+    int precedingBackslashes = countPrecedingBackslashes(input, idx);
+    // Only proceed if the backslash at idx is not itself escaped
+    // (i.e., there's an even number of preceding backslashes)
+    if (precedingBackslashes % 2 != 0) {
+      return -1;
+    }
+    
     int offset = 0;
+    // Check for \r (carriage return escape sequence: backslash followed by 'r')
     if (input.startsWith("\\r", idx)) {
       offset += 2;
     }
+    // Check for \n (newline escape sequence: backslash followed by 'n')
+    // Note: Both checks cannot match at the same idx because they check for different
+    // characters at position idx+1 ('r' vs 'n'). For a Windows-style line ending \r\n
+    // in the source (4 characters: backslash, 'r', backslash, 'n'), the calling loop
+    // in stringComponents will process \r at one idx, then advance by 2 and process \n
+    // at the next idx, so each escape sequence is handled in a separate iteration.
     if (input.startsWith("\\n", idx)) {
       offset += 2;
     }
