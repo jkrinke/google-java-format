@@ -344,14 +344,16 @@ public final class StringWrapper {
     }
     
     int offset = 0;
-    // Check for \r (carriage return escape sequence)
+    // Check for \r (carriage return escape sequence: backslash followed by 'r')
     if (input.startsWith("\\r", idx)) {
       offset += 2;
     }
-    // Check for \n (newline escape sequence)
-    // Note: This is a separate check from \r. For a sequence like \r\n
-    // (4 characters: backslash, r, backslash, n), only the first check will match at a
-    // given idx, then the loop in stringComponents will advance idx and match the second check.
+    // Check for \n (newline escape sequence: backslash followed by 'n')
+    // Note: Both checks cannot match at the same idx because they check for different
+    // characters at position idx+1 ('r' vs 'n'). For a Windows-style line ending \r\n
+    // in the source (4 characters: backslash, 'r', backslash, 'n'), the calling loop
+    // in stringComponents will process \r at one idx, then advance by 2 and process \n
+    // at the next idx, so each escape sequence is handled in a separate iteration.
     if (input.startsWith("\\n", idx)) {
       offset += 2;
     }
