@@ -295,12 +295,8 @@ public final class StringWrapper {
             // Advance through all consecutive \n and \r sequences
             escaped = false;
             int endIdx = idx + 1;
-            while (endIdx + 1 < text.length()) {
-              if (text.charAt(endIdx) == '\\' && (text.charAt(endIdx + 1) == 'n' || text.charAt(endIdx + 1) == 'r')) {
-                endIdx += 2;
-              } else {
-                break;
-              }
+            while (endIdx + 1 < text.length() && text.charAt(endIdx) == '\\' && (text.charAt(endIdx + 1) == 'n' || text.charAt(endIdx + 1) == 'r')) {
+              endIdx += 2;
             }
             // Now endIdx points just past the last newline sequence
             // Split AFTER all the newlines, at endIdx
