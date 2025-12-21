@@ -303,31 +303,30 @@ public final class StringWrapper {
   }
 
   /**
-   * Counts the number of consecutive backslashes preceding the given position.
+   * Checks if the backslash at the given position is itself escaped.
    *
    * @param input the input string
-   * @param idx the position to check
-   * @return the number of consecutive backslashes immediately before idx
+   * @param idx the position to check (must point to a backslash character)
+   * @return true if the backslash at idx is escaped, false otherwise
    */
-  private static int countPrecedingBackslashes(String input, int idx) {
+  private static boolean hasEscapedBackslashAt(String input, int idx) {
+    // Count preceding backslashes by scanning backwards
     int count = 0;
     int pos = idx - 1;
     while (pos >= 0 && input.charAt(pos) == '\\') {
       count++;
       pos--;
     }
-    return count;
+    // If there's an odd number of preceding backslashes, the last one escapes the current backslash
+    return count % 2 != 0;
   }
 
   static int hasEscapedWhitespaceAt(String input, int idx) {
     if (input.startsWith("\\t", idx)) {
-      // Check if the backslash itself is escaped by counting preceding backslashes.
-      // If there's an even number of preceding backslashes (including zero), then they pair up
-      // to form escaped backslashes, leaving the current backslash free to escape the 't'.
-      // If there's an odd number, the last preceding backslash escapes the current one,
-      // so this is not an escaped tab but rather an escaped backslash followed by 't'.
-      int precedingBackslashes = countPrecedingBackslashes(input, idx);
-      if (precedingBackslashes % 2 == 0) {
+      // Check if the backslash itself is escaped.
+      // If the backslash is not escaped, it escapes the 't' to form an escaped tab.
+      // If the backslash is escaped, this is an escaped backslash followed by 't'.
+      if (!hasEscapedBackslashAt(input, idx)) {
         return 2;
       }
     }
@@ -335,11 +334,8 @@ public final class StringWrapper {
   }
 
   static int hasEscapedNewlineAt(String input, int idx) {
-    // Count preceding backslashes once and reuse for both checks
-    int precedingBackslashes = countPrecedingBackslashes(input, idx);
     // Only proceed if the backslash at idx is not itself escaped
-    // (i.e., there's an even number of preceding backslashes)
-    if (precedingBackslashes % 2 != 0) {
+    if (hasEscapedBackslashAt(input, idx)) {
       return -1;
     }
     
