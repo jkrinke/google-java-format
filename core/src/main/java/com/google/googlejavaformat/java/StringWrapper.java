@@ -270,23 +270,65 @@ public final class StringWrapper {
       // adjust for leading and trailing double quotes
       String text = input.substring(getStartPosition(tree) + 1, getEndPosition(tree, unit) - 1);
       int start = 0;
+      // Track whether the current position follows an unescaped backslash
+      boolean escaped = false;
       for (int idx = 0; idx < text.length(); idx++) {
-        if (CharMatcher.whitespace().matches(text.charAt(idx))) {
-          // continue below
-        } else if (hasEscapedWhitespaceAt(text, idx) != -1) {
-          // continue below
-        } else if (hasEscapedNewlineAt(text, idx) != -1) {
-          int length;
-          while ((length = hasEscapedNewlineAt(text, idx)) != -1) {
-            idx += length;
+        char ch = text.charAt(idx);
+        
+        // Check if we should split at this position
+        boolean shouldSplit = false;
+        int splitPos = idx; // Position where we split
+        
+        if (escaped) {
+          // Current character is escaped by a preceding backslash
+          if (ch == '\\') {
+            // \\ - escaped backslash, the next character is NOT escaped
+            escaped = false;
+          } else if (ch == 't') {
+            // \t - escaped tab
+            // Split before the backslash (at idx - 1)
+            shouldSplit = true;
+            splitPos = idx - 1; // Split before the backslash
+            escaped = false;
+          } else if (ch == 'n' || ch == 'r') {
+            // \n or \r - escaped newline/carriage return
+            // Advance through all consecutive \n and \r sequences
+            escaped = false;
+            int endIdx = idx + 1;
+            while (endIdx < text.length() - 1) {
+              if (text.charAt(endIdx) == '\\') {
+                char nextCh = text.charAt(endIdx + 1);
+                if (nextCh == 'n' || nextCh == 'r') {
+                  endIdx += 2;
+                } else {
+                  break;
+                }
+              } else {
+                break;
+              }
+            }
+            // Now endIdx points just past the last newline sequence
+            // Split AFTER all the newlines, at endIdx
+            shouldSplit = true;
+            splitPos = endIdx; // Split after all consecutive newlines
+            idx = endIdx - 1; // -1 because the for loop will increment
+          } else {
+            // Other escape sequence (e.g., \", \', etc.)
+            escaped = false;
           }
-        } else {
-          continue;
+        } else if (CharMatcher.whitespace().matches(ch)) {
+          shouldSplit = true;
+        } else if (ch == '\\') {
+          // Start of an escape sequence
+          escaped = true;
         }
-        piece.append(text, start, idx);
-        result.add(piece.toString());
-        piece = new StringBuilder();
-        start = idx;
+        
+        if (shouldSplit) {
+          piece.append(text, start, splitPos);
+          result.add(piece.toString());
+          piece = new StringBuilder();
+          start = splitPos;
+        }
       }
       if (piece.length() > 0) {
         result.add(piece.toString());
@@ -300,64 +342,6 @@ public final class StringWrapper {
       result.add(piece.toString());
     }
     return result.build();
-  }
-
-  /**
-   * Counts the number of consecutive backslashes preceding the given position.
-   *
-   * @param input the input string
-   * @param idx the position to check
-   * @return the number of consecutive backslashes immediately before idx
-   */
-  private static int countPrecedingBackslashes(String input, int idx) {
-    int count = 0;
-    int pos = idx - 1;
-    while (pos >= 0 && input.charAt(pos) == '\\') {
-      count++;
-      pos--;
-    }
-    return count;
-  }
-
-  static int hasEscapedWhitespaceAt(String input, int idx) {
-    if (input.startsWith("\\t", idx)) {
-      // Check if the backslash itself is escaped by counting preceding backslashes.
-      // If there's an even number of preceding backslashes (including zero), then they pair up
-      // to form escaped backslashes, leaving the current backslash free to escape the 't'.
-      // If there's an odd number, the last preceding backslash escapes the current one,
-      // so this is not an escaped tab but rather an escaped backslash followed by 't'.
-      int precedingBackslashes = countPrecedingBackslashes(input, idx);
-      if (precedingBackslashes % 2 == 0) {
-        return 2;
-      }
-    }
-    return -1;
-  }
-
-  static int hasEscapedNewlineAt(String input, int idx) {
-    // Count preceding backslashes once and reuse for both checks
-    int precedingBackslashes = countPrecedingBackslashes(input, idx);
-    // Only proceed if the backslash at idx is not itself escaped
-    // (i.e., there's an even number of preceding backslashes)
-    if (precedingBackslashes % 2 != 0) {
-      return -1;
-    }
-    
-    int offset = 0;
-    // Check for \r (carriage return escape sequence: backslash followed by 'r')
-    if (input.startsWith("\\r", idx)) {
-      offset += 2;
-    }
-    // Check for \n (newline escape sequence: backslash followed by 'n')
-    // Note: Both checks cannot match at the same idx because they check for different
-    // characters at position idx+1 ('r' vs 'n'). For a Windows-style line ending \r\n
-    // in the source (4 characters: backslash, 'r', backslash, 'n'), the calling loop
-    // in stringComponents will process \r at one idx, then advance by 2 and process \n
-    // at the next idx, so each escape sequence is handled in a separate iteration.
-    if (input.startsWith("\\n", idx)) {
-      offset += 2;
-    }
-    return offset > 0 ? offset : -1;
   }
 
   /**
