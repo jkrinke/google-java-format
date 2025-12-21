@@ -333,22 +333,25 @@ public final class StringWrapper {
   }
 
   static int hasEscapedNewlineAt(String input, int idx) {
-    int offset = 0;
-    // Note: Only one of these conditions can be true at a given idx, since they check for
-    // different characters at the same position. The checks are separate to handle both \r and \n.
-    if (input.startsWith("\\r", idx)) {
-      // Check if the backslash itself is escaped
-      int precedingBackslashes = countPrecedingBackslashes(input, idx);
-      if (precedingBackslashes % 2 == 0) {
-        offset += 2;
-      }
+    // Count preceding backslashes once and reuse for both checks
+    int precedingBackslashes = countPrecedingBackslashes(input, idx);
+    // Only proceed if the backslash at idx is not itself escaped
+    // (i.e., there's an even number of preceding backslashes)
+    if (precedingBackslashes % 2 != 0) {
+      return -1;
     }
+    
+    int offset = 0;
+    // Check for \r (carriage return escape sequence)
+    if (input.startsWith("\\r", idx)) {
+      offset += 2;
+    }
+    // Check for \n (newline escape sequence)
+    // Note: This is a separate check from \r. For a sequence like \r\n (4 chars: \ r \ n),
+    // only the first check will match at a given idx, then the loop in stringComponents
+    // will advance idx and match the second check.
     if (input.startsWith("\\n", idx)) {
-      // Check if the backslash itself is escaped
-      int precedingBackslashes = countPrecedingBackslashes(input, idx);
-      if (precedingBackslashes % 2 == 0) {
-        offset += 2;
-      }
+      offset += 2;
     }
     return offset > 0 ? offset : -1;
   }
