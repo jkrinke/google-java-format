@@ -322,7 +322,9 @@ public final class StringWrapper {
   static int hasEscapedWhitespaceAt(String input, int idx) {
     if (input.startsWith("\\t", idx)) {
       // Check if the backslash itself is escaped by counting preceding backslashes.
-      // If there's an even number of preceding backslashes, the backslash before 't' is escaped,
+      // If there's an even number of preceding backslashes (including zero), then they pair up
+      // to form escaped backslashes, leaving the current backslash free to escape the 't'.
+      // If there's an odd number, the last preceding backslash escapes the current one,
       // so this is not an escaped tab but rather an escaped backslash followed by 't'.
       int precedingBackslashes = countPrecedingBackslashes(input, idx);
       if (precedingBackslashes % 2 == 0) {
@@ -347,9 +349,9 @@ public final class StringWrapper {
       offset += 2;
     }
     // Check for \n (newline escape sequence)
-    // Note: This is a separate check from \r. For a sequence like \r\n (4 chars: \ r \ n),
-    // only the first check will match at a given idx, then the loop in stringComponents
-    // will advance idx and match the second check.
+    // Note: This is a separate check from \r. For a sequence like \r\n
+    // (4 characters: backslash, r, backslash, n), only the first check will match at a
+    // given idx, then the loop in stringComponents will advance idx and match the second check.
     if (input.startsWith("\\n", idx)) {
       offset += 2;
     }
