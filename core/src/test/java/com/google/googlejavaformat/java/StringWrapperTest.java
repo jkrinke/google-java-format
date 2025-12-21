@@ -201,6 +201,53 @@ public class StringWrapperTest {
     assertThat(actual).isEqualTo(expected);
   }
 
+  // Regression test for https://github.com/google/google-java-format/issues/1253
+  @Test
+  public void escapedBackslashFollowedByT() throws Exception {
+    // String ending with \\t (escaped backslash followed by 't')
+    // should not be confused with \t (escaped tab)
+    String input =
+        lines(
+            "package com.example;",
+            "",
+            "final class Test {",
+            "  String s = \"'\\\\d{2}):(\\\\d{2}):(\\\\d{2})(\\\\.\\\\d{1,9})?)([Zz]|([+-])(\\\\d{2}):(\\\\d{2})))|(READ_TIMESTAMP)[\\\\t\";",
+            "}");
+    String output =
+        lines(
+            "package com.example;",
+            "",
+            "final class Test {",
+            "  String s =",
+            "      \"'\\\\d{2}):(\\\\d{2}):(\\\\d{2})(\\\\.\\\\d{1,9})?)([Zz]|([+-])(\\\\d{2}):(\\\\d{2})))|(READ_TIMESTAMP)[\\\\t\";",
+            "}");
+
+    assertThat(StringWrapper.wrap(100, input, new Formatter())).isEqualTo(output);
+  }
+
+  // Regression test for https://github.com/google/google-java-format/issues/1253
+  @Test
+  public void escapedBackslashFollowedByN() throws Exception {
+    // String ending with \\n (escaped backslash followed by 'n')
+    // should not be confused with \n (escaped newline)
+    String input =
+        lines(
+            "package com.example;",
+            "",
+            "final class Test {",
+            "  String s = \"some text here that is quite long to trigger line wrapping [\\\\n\";",
+            "}");
+    String output =
+        lines(
+            "package com.example;",
+            "",
+            "final class Test {",
+            "  String s = \"some text here that is quite long to trigger line wrapping [\\\\n\";",
+            "}");
+
+    assertThat(StringWrapper.wrap(100, input, new Formatter())).isEqualTo(output);
+  }
+
   private static String lines(String... line) {
     return Joiner.on('\n').join(line) + '\n';
   }
