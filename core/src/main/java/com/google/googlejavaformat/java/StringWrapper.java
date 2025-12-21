@@ -334,6 +334,8 @@ public final class StringWrapper {
 
   static int hasEscapedNewlineAt(String input, int idx) {
     int offset = 0;
+    // Note: Only one of these conditions can be true at a given idx, since they check for
+    // different characters at the same position. The checks are separate to handle both \r and \n.
     if (input.startsWith("\\r", idx)) {
       // Check if the backslash itself is escaped
       int precedingBackslashes = countPrecedingBackslashes(input, idx);
